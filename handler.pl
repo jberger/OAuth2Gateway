@@ -2,7 +2,7 @@ use Mojolicious::Lite -signatures;
 
 use Digest::SHA qw(sha1_base64);
 
-post '/proxy/sync' => sub ($c) {
+post '/gateway/sync' => sub ($c) {
   my $parent = $c->req->json('/parent');
   my $name = $parent->{metadata}{name};
   my $pod = {
@@ -110,7 +110,7 @@ post '/ingress/customize' => sub ($c) {
   my @resources = (
     {
       apiVersion => 'oauth2gateway.jberger.github.io/v1alpha1',
-      resource => 'oauth2gateways',
+      resource => 'gateways',
       name => [$name],
     },
     {
@@ -125,7 +125,7 @@ post '/ingress/customize' => sub ($c) {
 
 post '/ingress/sync' => sub ($c) {
   my $name = $c->req->json('/object/metadata/annotations/oauth2gateway.jberger.github.io~1gateway.name');
-  my $gateway = $c->req->json("/related/OAuth2Gateway.oauth2gateway.jberger.github.io~1v1alpha1/$name");
+  my $gateway = $c->req->json("/related/Gateway.oauth2gateway.jberger.github.io~1v1alpha1/$name");
   my $service = $c->req->json("/related/Service.v1/$name-oauth2-proxy");
   my $annotations = {
     'nginx.ingress.kubernetes.io/auth-url' => 'https://$host/oauth2/auth',
