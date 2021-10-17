@@ -1,0 +1,26 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: DecoratorController
+metadata:
+  name: ingress-controller
+spec:
+  resources:
+    - apiVersion: networking.k8s.io/v1
+      resource: ingresses
+      annotationSelector:
+        matchExpressions:
+          - key: oauth2gateway.jberger.xyz/gateway.name
+            operator: Exists
+  attachments:
+    - apiVersion: networking.k8s.io/v1
+      resource: ingresses
+      updateStrategy:
+        method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://tuesdae.jberger.pl:3001/ingress/sync
+    customize:
+      webhook:
+        url: http://tuesdae.jberger.pl:3001/ingress/customize
+
+

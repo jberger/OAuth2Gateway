@@ -1,0 +1,22 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: proxy-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: oauth2gateway.jberger.xyz/v1alpha1
+    resource: oauth2gateways
+  childResources:
+  - apiVersion: v1
+    resource: pods
+    updateStrategy:
+      method: Recreate
+  - apiVersion: v1
+    resource: services
+    updateStrategy:
+      method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://tuesdae.jberger.pl:3001/proxy/sync
