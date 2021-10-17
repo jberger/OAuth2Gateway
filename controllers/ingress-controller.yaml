@@ -8,7 +8,7 @@ spec:
       resource: ingresses
       annotationSelector:
         matchExpressions:
-          - key: oauth2gateway.jberger.xyz/gateway.name
+          - key: oauth2gateway.jberger.github.io/gateway.name
             operator: Exists
   attachments:
     - apiVersion: networking.k8s.io/v1

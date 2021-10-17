@@ -5,7 +5,7 @@ metadata:
 spec:
   generateSelector: true
   parentResource:
-    apiVersion: oauth2gateway.jberger.xyz/v1alpha1
+    apiVersion: oauth2gateway.jberger.github.io/v1alpha1
     resource: oauth2gateways
   childResources:
   - apiVersion: v1
