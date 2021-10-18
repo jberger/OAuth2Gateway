@@ -105,70 +105,122 @@ post '/gateway/sync' => sub ($c) {
   $c->render(json => {status => {}, children => [$pod, $service]});
 };
 
-post '/ingress/customize' => sub ($c) {
-  my $name = $c->req->json('/parent/metadata/annotations/oauth2gateway.jberger.github.io~1gateway.name');
+post '/domain/customize' => sub ($c) {
+  my $gateway = $c->req->json('/parent/spec/gateway');
+  my @services = map { $_->{service}{name} } @{ $c->req->json('/parent/spec/paths') || [] };
+  warn Mojo::Util::dumper [$gateway, \@services];
   my @resources = (
     {
       apiVersion => 'oauth2gateway.jberger.github.io/v1alpha1',
       resource => 'gateways',
-      name => [$name],
+      names => [$gateway],
     },
     {
       apiVersion => 'v1',
       resource => 'services',
-      name => ["$name-oauth2-proxy"],
-    },
+      names => \@services,
+    }
   );
 
   $c->render(json => { relatedResources => \@resources });
 };
 
-post '/ingress/sync' => sub ($c) {
-  my $name = $c->req->json('/object/metadata/annotations/oauth2gateway.jberger.github.io~1gateway.name');
-  my $gateway = $c->req->json("/related/Gateway.oauth2gateway.jberger.github.io~1v1alpha1/$name");
-  my $service = $c->req->json("/related/Service.v1/$name-oauth2-proxy");
-  my $annotations = {
-    'nginx.ingress.kubernetes.io/auth-url' => 'https://$host/oauth2/auth',
-    'nginx.ingress.kubernetes.io/auth-signin' => 'https://$host/oauth2/start?rd=$escaped_request_uri',
-    'nginx.ingress.kubernetes.io/auth-response-headers' => 'x-auth-request-user, x-auth-request-email, x-auth-request-groups, x-auth-request-preferred-username, x-auth-request-access-token',
-    'nginx.ingress.kubernetes.io/proxy-buffer-size' => '64k',
-  };
-  my $siphon = {
+post '/domain/sync' => sub ($c) {
+  my $domain = $c->req->json('/parent');
+  my $host = $c->req->json('/parent/spec/host');
+  my $gateway_name = $c->req->json('/parent/spec/gateway');
+  my $gateway = $c->req->json("/related/Gateway.oauth2gateway.jberger.github.io~1v1alpha1/$gateway_name");
+  my $services = $c->req->json("/related/Service.v1");
+  my $name = $domain->{metadata}{name};
+
+  my $annotations = $domain->{spec}{ingressAnnotations} || {};
+
+  my @tls = $domain->{spec}{tlsSecretName} ? (
+    tls => [{
+      hosts => [ $host ],
+      secretName => $domain->{spec}{tlsSecretName},
+    }]
+  ) : ();
+
+  my @paths = map {
+    my $service = $services->{$_->{service}{name}};
+    my $port = $_->{service}{port} || $service->{spec}{ports}[0]{port};
+    {
+      path => $_->{path},
+      pathType => 'Prefix',
+      backend => {
+        service => {
+          name => $service->{metadata}{name},
+          port => {
+            number => $port,
+          },
+        },
+      },
+    };
+  } @{ $domain->{spec}{paths} };
+
+  #TODO oauth2Path
+
+  my $standard = {
     apiVersion => 'networking.k8s.io/v1',
     kind => 'Ingress',
     metadata => {
-      name => $c->req->json('/object/metadata/name') . "-$name-oauth2-proxy",
-      annotations => $c->req->json('/object/metadata/annotations'),
+      name => "$name-ingress",
+      annotations => {
+        'nginx.ingress.kubernetes.io/auth-response-headers' => 'x-auth-request-user, x-auth-request-email, x-auth-request-groups, x-auth-request-preferred-username, x-auth-request-access-token',
+        'nginx.ingress.kubernetes.io/proxy-buffer-size' => '64k',
+        %$annotations,
+        'kubernetes.io/ingress.class' => "nginx",
+        'nginx.ingress.kubernetes.io/auth-url' => 'https://$host/oauth2/auth',
+        'nginx.ingress.kubernetes.io/auth-signin' => 'https://$host/oauth2/start?rd=$escaped_request_uri',
+      },
     },
-    spec => $c->req->json('/object/spec'),
-  };
-  # remove the added annotations
-  delete @{$siphon->{metadata}{annotations}}{
-    'oauth2gateway.jberger.github.io/gateway.name',
-    keys %$annotations
-  };
-  my $host = $siphon->{spec}{rules}[0]{host};
-  #my $path = $rule->{http}{paths}[0]{path};
-  $siphon->{spec}{rules} = [{
-    host => $host,
-    http => {
-      paths => [{
-        path => '/oauth2',
-        pathType => 'Prefix',
-        backend => {
-          service => {
-            name => $service->{metadata}{name},
-            port => {
-              number => $service->{spec}{ports}[0]{port},
-            },
-          },
+    spec => {
+      @tls,
+      rules => [{
+        host => $host,
+        http => {
+          paths => \@paths,
         },
       }],
     },
-  }];
+  };
+
+  my $proxy = {
+    apiVersion => 'networking.k8s.io/v1',
+    kind => 'Ingress',
+    metadata => {
+      name => "$name-oauth2-proxy-ingress",
+      annotations => {
+        %$annotations,
+        'kubernetes.io/ingress.class' => "nginx",
+      },
+    },
+    spec => {
+      @tls,
+      rules => [{
+        host => $host,
+        http => {
+          paths => [{
+            path => '/oauth2',
+            pathType => 'Prefix',
+            backend => {
+              service => {
+                name => "$gateway_name-oauth2-proxy",
+                port => {
+                  number => 4180,
+                },
+              },
+            },
+          }],
+        },
+      }],
+    },
+  };
+
   $c->render(json => {
-    annotations => $annotations,
-    attachments => [$siphon],
+    status => {},
+    children => [ $standard, $proxy ],
   });
 };
 

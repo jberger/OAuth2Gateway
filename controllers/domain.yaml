@@ -1,0 +1,22 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: domain-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: oauth2gateway.jberger.github.io/v1alpha1
+    resource: domains
+  childResources:
+    - apiVersion: networking.k8s.io/v1
+      resource: ingresses
+      updateStrategy:
+        method: InPlace
+  hooks:
+    sync:
+      webhook:
+        url: http://tuesdae.jberger.pl:3001/domain/sync
+    customize:
+      webhook:
+        url: http://tuesdae.jberger.pl:3001/domain/customize
+
