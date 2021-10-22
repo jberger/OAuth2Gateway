@@ -1,0 +1,29 @@
+{
+  "name": "oauth2gateway-handler",
+  "version": "1.0.0",
+  "description": "Webhook target for OAuth2Gateway",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "app": "node src/index.js",
+    "dev": "npx nodemon src/index.js server",
+    "start": "node src/index.js server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jberger/OAuth2Gateway.git"
+  },
+  "author": "Joel Berger",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jberger/OAuth2Gateway/issues"
+  },
+  "homepage": "https://github.com/jberger/OAuth2Gateway#readme",
+  "dependencies": {
+    "@mojojs/core": "^0.4.7"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.14"
+  }
+}

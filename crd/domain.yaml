@@ -41,6 +41,7 @@ spec:
                 ingressAnnotations:
                   type: object
                   additionalProperties: true
+                  default: {}
                 paths:
                   type: array
                   items:
