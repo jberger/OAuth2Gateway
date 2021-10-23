@@ -104,6 +104,6 @@ export default class GatewayController {
       },
     };
 
-    ctx.render({json: {status: {}, children: [pod, service]}});
+    return ctx.render({json: {status: {}, children: [pod, service]}});
   }
 }

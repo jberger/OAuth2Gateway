@@ -18,7 +18,7 @@ export default class DomainController {
       }
     ];
 
-    ctx.render({json: { relatedResources }});
+    return ctx.render({json: { relatedResources }});
   }
 
   async sync(ctx) {
@@ -117,6 +117,6 @@ export default class DomainController {
       },
     };
 
-    ctx.render({json: { status: {}, children: [ standard, proxy ] }});
+    return ctx.render({json: { status: {}, children: [ standard, proxy ] }});
   }
 }
